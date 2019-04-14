@@ -192,7 +192,7 @@ Dense(1100,6,pdrop=0.5))
 
 summary.(l.w for l in dcnn5.layers)
 
-n_epochs=350;
+n_epochs=500;
 lr_decay = 0.005
-cnn9=trainresults("models/dcnn5.jld2", dcnn5);
+cnn9=trainresults("models/dcnn8.jld2", dcnn5);
 
