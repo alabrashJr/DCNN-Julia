@@ -187,12 +187,12 @@ end
 dcnn5 =   Chain( Conv(3,3,1,5),
 Conv(4,4,5,10),
 Conv(5,5,10,15),
-Dense(27030,1100,pdrop=0.5),
+Dense(27030,1100,pdrop=0.7),
 Dense(1100,6,pdrop=0.5))
 
 summary.(l.w for l in dcnn5.layers)
 
 n_epochs=500;
-lr_decay = 0.005
-cnn9=trainresults("models/dcnn8.jld2", dcnn5);
+lr_decay = 0.0075
+cnn9=trainresults("models/dcnn8_4.jld2", dcnn5);
 
