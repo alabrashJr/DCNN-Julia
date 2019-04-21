@@ -1,8 +1,8 @@
 # @Abdulrahman Alabrash
 # https://github.com/alabrashJr/DCNN-Julia
-# 
+#
 # Read data from saved file load("TREC_sib.jld2","datas")-> returns revs, W, W2, word_idx_map, vocab
-# 
+#
 # revs Dict{String,Any} with 5 entries:y,num_words,tree,text,split
 # y-> label of the questions 1-5
 # num_words-> length of questions
@@ -15,15 +15,15 @@
 # vocab DefaultDict{Any,Any,Int64} with 10097 entries, vocab and reptation dictionary
 
 
-using Pkg;Pkg.update(); for p in ("Embeddings","DataFrames","DataStructures","DataFrames","FileIO","LinearAlgebra","Knet","FileIO"); haskey(Pkg.installed(),p) || Pkg.add(p); end
-using DataStructures,DataFrames,FileIO,Embeddings,LinearAlgebra,DataFrames;
+using Pkg; for p in ("DataStructures","LinearAlgebra","Knet","FileIO"); haskey(Pkg.installed(),p) || Pkg.add(p); end
+using DataStructures,FileIO,LinearAlgebra;
 using Base.Iterators: flatten
 using Statistics: mean
-using Knet: Knet, conv4, pool, mat, KnetArray, nll, zeroone, progress, sgd, param, param0, dropout, relu, Data,minibatch;
+using Knet: Knet, conv4, pool, mat, KnetArray, nll, zeroone, progress, sgd, param, param0, dropout, relu, Data,minibatch,adadelta,training;
 using Dates
 
 bels=["abbreviation", "entity", "description", "location" ,"numeric"," "]
-revs, W, W2, word_idx_map, vocab=load("Data/TREC_sib.jld2","datas"); 
+revs, W, W2, word_idx_map, vocab=load("Data/TREC_sib.jld2","datas");
 word_idx_map["ROOT"]=size(W,1);
 W=W';
 
@@ -32,37 +32,37 @@ function get_text_mat(t,word_idx_map;max_l=56,filter_h=5)
     #t the text of question
     x=[] # output matrix
     pad=filter_h -1 # padding number
-    for i in collect(1:pad);push!(x,0);end #adding padding 
+    for i in collect(1:pad);push!(x,0);end #adding padding
     words=split(t)
-    #extract the unique id of words in the question text and adding it to the matrix 
+    #extract the unique id of words in the question text and adding it to the matrix
     for w in words
         if w in keys(word_idx_map);push!(x,word_idx_map[w])
         else; @show w ;end
-    end    
+    end
 
-    while length(x)<max_l+2*pad    # accomplish 64 +1 size by adding zeros till finish 
+    while length(x)<max_l+2*pad    # accomplish 64 +1 size by adding zeros till finish
             push!(x,0)
     end
-    
+
     return  x
 end
 
 function getSen(vector)
 #labels=["abbreviation","numeric",  "description", "human","location" ,"entity"]
-t=Array{Int}(vector)
-println(permutedims(t))
-for i in t
-    if i==1557;print("?\n y =",t[end]+1 );break;end
-    if i==0;continue;end
-    for (key,value) in word_idx_map
-        if value==i; print(key," ");end
+    t=Array{Int}(vector)
+    println(permutedims(t))
+    for i in t
+        if i==1557;print("?\n y =",t[end]+1 );break;end
+        if i==0;continue;end
+        for (key,value) in word_idx_map
+            if value==i; print(key," ");end
+        end
     end
 end
-end
 
-#Transforms sentence into a list of indices. Pad with zeroes. 
+#Transforms sentence into a list of indices. Pad with zeroes.
 function get_tree_rep(r,word_idx_map)
-# question 
+# question
 #@show t=r["tree"] #the tree of question
     each_sent=deepcopy(r)# output matrix
     for (j, each_word) in enumerate(each_sent[1:end-1])
@@ -79,7 +79,7 @@ function get_tree_rep(r,word_idx_map)
                     @show each_field
                 end
             end
-    end       
+    end
     return each_sent;
 end
 
@@ -87,10 +87,10 @@ function train_dev_test(revs)
     s1,s2,s3=[],[],[]
     t1,t2,t3=[],[],[]
     for rev in revs
-    sent =get_text_mat(rev["text"], word_idx_map)   
+    sent =get_text_mat(rev["text"], word_idx_map)
     push!(sent,rev["y"])
     sent_tensor = get_tree_rep(rev["tree"], word_idx_map)
-        
+
     if rev["split"]==1
             push!(s1,Array{Int}(sent))
             push!(t1,sent_tensor)
@@ -127,53 +127,67 @@ dtst=minibatch(sent2,y_test,160);
 
 # Let's define a chain of layers
 
+# struct Chain
+#     layers
+#     Chain(layers...) = new(layers)
+# end
+# function (c::Chain)(x)
+#     #println(Dates.format(now(), "MM:SS"),".Chaindeyim\t",summary(x),"\t",size(x))
+#     x=KnetArray{Float32}(reshape(W[:, permutedims(hcat(x...))],(300,450,1,160)))
+#     #println(Dates.format(now(), "MM:SS"),".Chaindeyim\t",summary(x),"\t",size(x))
+# #     println("\nChaindeyim ,\t ", typeof(x),"\t", summary(x))
+#     (for l in c.layers; x = l(x); end; x)
+# end
+# function (c::Chain)(x,y)
+# #     println("\nloss Chaindeyim x ,\t ", typeof(x),"\t", summary(x))
+# #     println("\nloss Chaindeyim y ,\t ", typeof(y),"\t", summary(y))
+#     nll(c(x),y)
+#
+# end
+# (c::Chain)(d::Data) = mean(c(x,y) for (x,y) in d)
+
 struct Chain
-    layers
-    Chain(layers...) = new(layers)
+    layers; λ1; λ2
+    Chain(layers...; λ1=0, λ2=0) = new(layers, λ1, λ2)
 end
 function (c::Chain)(x)
-    #println(Dates.format(now(), "MM:SS"),".Chaindeyim\t",summary(x),"\t",size(x))
     x=KnetArray{Float32}(reshape(W[:, permutedims(hcat(x...))],(300,450,1,160)))
-    #println(Dates.format(now(), "MM:SS"),".Chaindeyim\t",summary(x),"\t",size(x))
-#     println("\nChaindeyim ,\t ", typeof(x),"\t", summary(x))
-    (for l in c.layers; x = l(x); end; x)
-end
-function (c::Chain)(x,y) 
-#     println("\nloss Chaindeyim x ,\t ", typeof(x),"\t", summary(x))
-#     println("\nloss Chaindeyim y ,\t ", typeof(y),"\t", summary(y))
-    nll(c(x),y)
-    
-end
+     (for l in c.layers; x = l(x); end; x)
+ end
 (c::Chain)(d::Data) = mean(c(x,y) for (x,y) in d)
-
+function (c::Chain)(x,y)
+    loss = nll(c(x),y)
+    if training() # Only apply regularization during training, only to weights, not biases.
+        c.λ1 != 0 && (loss += c.λ1 * sum(sum(abs, l.w) for l in c.layers))
+        c.λ2 != 0 && (loss += c.λ2 * sum(sum(abs2,l.w) for l in c.layers))
+    end
+    return loss
+end
 # Define a convolutional layer:
 struct Conv; w; b; f; p;E; end
 function (c::Conv)(x)
 #     println("\nConvdeyim \t", typeof(x),"\t", summary(x) )
 #xx=KnetArray{Float32}(reshape(c.E[:, permutedims(hcat(x...))],(300,450,1,160)))
-return c.f.(pool(conv4(c.w, dropout(x,c.p)) .+ c.b))
+    return c.f.(pool(conv4(c.w, dropout(x,c.p)) .+ c.b))
 end
 Conv(w1::Int,w2::Int,cx::Int,cy::Int,f=relu;pdrop=0,E=W) = Conv(param(w1,w2,cx,cy), param0(1,1,cy,1), f, pdrop,E)
 
 # Redefine dense layer (See mlp.ipynb):
 struct Dense; w; b; f; p; end
-function (d::Dense)(x) 
+function (d::Dense)(x)
 #     println("\nDensedeyim ,\t " , typeof(x),"\t", summary(x))
     d.f.(d.w * mat(dropout(x,d.p)) .+ d.b) # mat reshapes 4-D tensor to 2-D matrix so we can use matmul
 end
 Dense(i::Int,o::Int,f=relu;pdrop=0) = Dense(param(o,i), param0(o), f, pdrop)
 
-# hidden_units=[100,2] #which meaning ...... how many conv layers 
+# hidden_units=[100,2] #which meaning ...... how many conv layers
 # dropout_rate=[0.5] #where in which layer ? conv or dense
-n_epochs=50;
-# batch_size=170, 
-lr_decay = 0.005
 function trainresults(file,model; o...)
         println("lr =",lr_decay," \t n_epochs= ",n_epochs)
     if (print("Train from scratch? "); readline()[1]=='y')
         takeevery(n,itr) = (x for (i,x) in enumerate(itr) if i % n == 1)
         r = ((model(dtrn), model(dtst), zeroone(model,dtrn), zeroone(model,dtst))
-             for x in takeevery(length(dtrn), progress(sgd(model,repeat(dtrn,n_epochs),lr=lr_decay))))
+             for x in takeevery(length(dtrn), progress(adadelta(model,repeat(dtrn,n_epochs),lr=lr_decay))))
         r = reshape(collect(Float32,flatten(r)),(4,:))
         Knet.save(file,"results",r)
         Knet.gc() # To save gpu memory
@@ -184,15 +198,21 @@ function trainresults(file,model; o...)
     return r
 end
 
-dcnn5 =   Chain( Conv(3,3,1,5),
+# dcnn5 =   Chain( Conv(3,3,1,5),
+# Conv(4,4,5,10),
+# Conv(5,5,10,15),
+# Dense(27030,1100,pdrop=0.7),
+# Dense(1100,6,pdrop=0.5))
+#
+
+dcnn6=Chain( Conv(3,3,1,5),
 Conv(4,4,5,10),
 Conv(5,5,10,15),
-Dense(27030,1100,pdrop=0.7),
-Dense(1100,6,pdrop=0.5))
-
-summary.(l.w for l in dcnn5.layers)
+Dense(27030,1100,pdrop=0.5),
+Dense(1100,6);λ1=4f-7)
+summary.(l.w for l in dcnn6.layers)
 
 n_epochs=500;
-lr_decay = 0.0075
-cnn9=trainresults("models/dcnn8_4.jld2", dcnn5);
+lr_decay = 0.95
+cnn9=trainresults("models/dcnn9.jld2", dcnn6);
 
