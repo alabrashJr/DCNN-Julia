@@ -209,10 +209,10 @@ dcnn6=Chain( Conv(3,3,1,5),
 Conv(4,4,5,10),
 Conv(5,5,10,15),
 Dense(27030,1100,pdrop=0.5),
-Dense(1100,6,pdrop=0.5);λ1=4f-5)
+Dense(1100,6,pdrop=0.5);λ1=6f-5)
 summary.(l.w for l in dcnn6.layers)
 
-n_epochs=80;
+n_epochs=150;
 lr_decay = 0.95
 cnn9=trainresults("models/dcnn9_3.jld2", dcnn6);
 
