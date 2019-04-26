@@ -178,9 +178,9 @@ function (d::Dense)(x)
 #     println("\nDensedeyim ,\t " , typeof(x),"\t", summary(x))
     d.f.(d.w * mat(dropout(x,d.p)) .+ d.b) # mat reshapes 4-D tensor to 2-D matrix so we can use matmul
 end
-Dense(i::Int,o::Int,f=relu;pdrop=0) = Dense(param(o,i), param0(o), f, pdrop)
+Dense(i::Int,o::Int,f=relu;pdrop=0) = Dense(Knet.Param(KnetArray{Float32}((rand(o,i).*0.02).- 0.01)), param0(o), f, pdrop)
 
-# hidden_units=[100,2] #which meaning ...... how many conv layers
+ hidden_units=[100,2] #which meaning ...... how many conv layers
 # dropout_rate=[0.5] #where in which layer ? conv or dense
 function trainresults(file,model; o...)
         println("lr =",lr_decay," \t n_epochs= ",n_epochs)
@@ -214,5 +214,5 @@ summary.(l.w for l in dcnn6.layers)
 
 n_epochs=150;
 lr_decay = 0.95
-cnn9=trainresults("models/dcnn9_3.jld2", dcnn6);
+cnn9=trainresults("models/dcnn9_5.jld2", dcnn6);
 
