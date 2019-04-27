@@ -205,14 +205,28 @@ end
 # Dense(1100,6,pdrop=0.5))
 #
 
+<<<<<<< HEAD
 dcnn6=Chain( Conv(3,3,1,5),
 Conv(4,4,5,20),
 Conv(5,5,20,30),
+=======
+dcnn7=Chain( Conv(3,3,1,5),
+Conv(4,4,5,15),
+Conv(5,5,15,30),
+>>>>>>> 420632d11bcc8adc8ee3045ea2092c7e57e11158
 Dense(54060,1100,pdrop=0.5),
 Dense(1100,6,pdrop=0.5);λ1=6f-5)
-summary.(l.w for l in dcnn6.layers)
+summary.(l.w for l in dcnn7.layers)
 
 n_epochs=150;
 lr_decay = 0.95
+<<<<<<< HEAD
 cnn9=trainresults("models/dcnn10_1.jld2", dcnn6);
+=======
+<<<<<<< HEAD
+cnn9=trainresults("models/dcnn10.jld2", dcnn7);
+=======
+cnn9=trainresults("models/dcnn9_5.jld2", dcnn6);
+>>>>>>> 13ef04219ef230057ede2126cfa7b0e1ce3d1f14
+>>>>>>> 420632d11bcc8adc8ee3045ea2092c7e57e11158
 
