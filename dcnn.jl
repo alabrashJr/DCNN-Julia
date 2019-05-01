@@ -27,6 +27,7 @@ revs, W, W2, word_idx_map, vocab=load("Data/TREC_sib.jld2","datas");
 word_idx_map["ROOT"]=size(W,1);
 W=W';
 
+
 #Transforms sentence into a list of indices. Pad with zeroes.
 function get_text_mat(t,word_idx_map;max_l=56,filter_h=5)
     #t the text of question
@@ -180,7 +181,6 @@ function (d::Dense)(x)
 end
 Dense(i::Int,o::Int,f=Knet.identity;pdrop=0) = Dense(Knet.Param(KnetArray{Float32}((rand(o,i).*0.02).- 0.01)), param0(o), f, pdrop)
 
- hidden_units=[100,2] #which meaning ...... how many conv layers
 # dropout_rate=[0.5] #where in which layer ? conv or dense
 function trainresults(file,model; o...)
         println("lr =",lr_decay," \t n_epochs= ",n_epochs)
@@ -204,15 +204,16 @@ end
 # Dense(27030,1100,pdrop=0.7),
 # Dense(1100,6,pdrop=0.5))
 #
-
-dcnn7=Chain( Conv(3,3,1,5),
-Conv(4,4,5,10),
-Conv(5,5,10,15),
-Dense(27030,1100,pdrop=0.5),
-Dense(1100,6,pdrop=0.5);λ1=6f-6)
+#[2,3,3,4,4]
+dcnn7=Chain( Conv(2,2,1,5),
+Conv(3,3,5,10),
+Conv(3,3,10,15),
+Conv(4,4,15,15),
+Conv(4,4,15,20),                
+Dense(1320,6,pdrop=0.5);λ1=6f-6)
 summary.(l.w for l in dcnn7.layers)
 
-n_epochs=150;
+n_epochs=50;
 lr_decay = 0.95
-cnn9=trainresults("models/dcnn10_2.jld2", dcnn7);
+cnn9=trainresults("models/dcnn11.jld2", dcnn7);
 
