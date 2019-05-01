@@ -187,7 +187,7 @@ function trainresults(file,model; o...)
     if (print("Train from scratch? "); readline()[1]=='y')
         takeevery(n,itr) = (x for (i,x) in enumerate(itr) if i % n == 1)
         r = ((model(dtrn), model(dtst), zeroone(model,dtrn), zeroone(model,dtst))
-             for x in takeevery(length(dtrn), progress(adadelta(model,repeat(dtrn,n_epochs),lr=lr_decay))))
+             for x in takeevery(length(dtrn), progress(adadelta(model,repeat(dtrn,n_epochs),lr=lr_decay,gclip=3))))
         r = reshape(collect(Float32,flatten(r)),(4,:))
         Knet.save(file,"results",r)
         Knet.gc() # To save gpu memory
@@ -204,7 +204,6 @@ end
 # Dense(27030,1100,pdrop=0.7),
 # Dense(1100,6,pdrop=0.5))
 #
-#[2,3,3,4,4]
 dcnn7=Chain( Conv(2,2,1,5),
 Conv(3,3,5,10),
 Conv(3,3,10,15),
@@ -215,5 +214,5 @@ summary.(l.w for l in dcnn7.layers)
 
 n_epochs=50;
 lr_decay = 0.95
-cnn9=trainresults("models/dcnn11.jld2", dcnn7);
+cnn9=trainresults("models/dcnn11_2.jld2", dcnn7);
 
