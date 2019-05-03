@@ -2,6 +2,7 @@
 A final project for Comp 541 Deep Learning Course By Deniz Yuret. 
 This project will be replicated [Dependency-based Convolutional Neural Networks for Sentence Embedding](http://people.oregonstate.edu/~mam/pdf/papers/DCNN.pdf) results using Knet.
 
+models accuracies : https://drive.google.com/file/d/13azo5E8JSoapbbLf6mXIBG3kfKqh7rnZ/view?usp=sharing
 
 Setup : https://docs.google.com/document/d/1lyTPLovvrCkhU1NIUpxNmgOyKWNYgQzCQG1Cdv-tveg/
 
@@ -12,9 +13,4 @@ persentation: https://docs.google.com/document/d/1lyTPLovvrCkhU1NIUpxNmgOyKWNYgQ
 Datasheet: https://docs.google.com/spreadsheets/d/1vkZVL3cdjIBhrTeOTqbaTDuQXeHW_J6rP7MCSOOSj3A
 
 DCNN source code that runs python 2.66 and Theano 0.7 : https://github.com/cosmmb/DCNN
-
-
-preindex.pynl -> reforms the sentence into a tree format from the parse file.
-
-process_TREC.pynl -> is the file for text precessing.
 
