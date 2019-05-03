@@ -204,15 +204,16 @@ end
 # Dense(27030,1100,pdrop=0.7),
 # Dense(1100,6,pdrop=0.5))
 #
+
 dcnn7=Chain( Conv(2,2,1,5),
 Conv(3,3,5,10),
-Conv(3,3,10,15),
-Conv(4,4,15,20),
-Conv(4,4,20,40),                
-Dense(2640,6,pdrop=0.7))
+Conv(3,3,10,20),
+Conv(4,4,20,40),
+Conv(4,4,40,100),
+Dense(6600,6,pdrop=0.7),λ1=4f-5)
 summary.(l.w for l in dcnn7.layers)
 
 n_epochs=80;
 lr_decay = 0.95
-cnn9=trainresults("models/dcnn11_3.jld2", dcnn7);
+cnn9=trainresults("models/dcnn11_4_2.jld2", dcnn7);
 
