@@ -173,8 +173,8 @@ function (c::Conv)(x)
     #@show size(r)
     return r
 end
-#Conv(w1::Int,w2::Int,cx::Int,cy::Int,f=relu;pdrop=0,E=W) = Conv(param(w1,w2,cx,cy), param0(1,1,cy,1), f, pdrop,E)
-Conv(w1::Int,w2::Int,cx::Int,cy::Int,f=relu;pdrop=0,E=W) = Conv(guassian(w1,w2,cx,cy), param0(1,1,cy,1), f, pdrop,E)
+Conv(w1::Int,w2::Int,cx::Int,cy::Int,f=relu;pdrop=0,E=W) = Conv(param(w1,w2,cx,cy), param0(1,1,cy,1), f, pdrop,E)
+#Conv(w1::Int,w2::Int,cx::Int,cy::Int,f=relu;pdrop=0,E=W) = Conv(guassian(w1,w2,cx,cy), param0(1,1,cy,1), f, pdrop,E)
 
 
 # Redefine dense layer (See mlp.ipynb):
@@ -183,8 +183,9 @@ function (d::Dense)(x)
 #     println("\nDensedeyim ,\t " , typeof(x),"\t", summary(x))
     d.f.(d.w * mat(dropout(x,d.p)) .+ d.b) # mat reshapes 4-D tensor to 2-D matrix so we can use matmul
 end
-Dense(i::Int,o::Int,f=Knet.identity;pdrop=0) = Dense(Knet.Param(KnetArray{Float32}((rand(o,i).*0.02).- 0.01)), param0(o), f, pdrop)
+#Dense(i::Int,o::Int,f=Knet.identity;pdrop=0) = Dense(Knet.Param(KnetArray{Float32}((rand(o,i).*0.02).- 0.01)), param0(o), f, pdrop)
 
+Dense(i::Int,o::Int,f=Knet.identity;pdrop=0) = Dense(param(o,i), param0(o), f, pdrop)
 
 
 function trainresults(file,model; o...)
@@ -203,36 +204,19 @@ function trainresults(file,model; o...)
     return r
 end
 
-#input=300×450                                                                                       300x450
-#x1=300-3+1= 298/2 =149 ,y1= 450-3+1= /2 =  224   => y(149,224,1)              3x3x1x5               149x224x5
-#x2=149-4+1= 146/2 =73  ,y2= 224-4+1= /2=  110   => y(73,110,1)               4x4x5x10              73x110x10
-#x3=73-5+1=  69/2  =34  ,y2= 110-5+1= /2=  53    => y(34,53,1)                5x5x10x10             34x53x10
-#fc=34*53*10= 1.802                                                           5x5x10x18020           18.020
-#fc=1100x6=6600                                                                18020x1100              6600
-# dcnn7=Chain( Conv(3,3,1,100),
-# Conv(4,4,100,100),
-# Conv(5,5,100,100),
-# Dense(180200,1100,pdrop=0.5),
-# Dense(1100,6,pdrop=0.5),λ2=3)
-# summary.(l.w for l in dcnn7.layers)
-
-#n_epochs=80;
-#lr_decay = 0.95
-#cnn9=trainresults("models/dcnn13.jld2", dcnn7);
-
-d=300
 # w1=guassian(d,3,1,100)# w1 =reshape([1.0:1500.0...], (5,3,1,100));
 # w2=guassian(d,4,1,100)# w2=reshape([1.0:2000.0...], (5,4,1,100));
 # w3=guassian(d,5,1,100)
+d=300
 dene=Chain(Conv(d,3,1,100)
 ,Conv(d,4,1,100)
 ,Conv(d,5,1,100)
-,Dense(300,6,pdrop=0.5),λ2=0.01)
+,Dense(300,6,pdrop=0.5),λ1=4f-6)
 summary.(l.w for l in dene.layers)
 
 n_epochs=20;
 lr_decay = 0.95
-cnn9=trainresults("models/dcnn13_2.jld2", dene);
+cnn9=trainresults("models/dcnn13_3.jld2", dene);
 
 #x=reshape(W[:, permutedims(hcat(first(dtrn)[1]...))],(300,450,1,160))
 #t=Conv(d,3,1,100)
