@@ -227,7 +227,7 @@ d=300
 dene=Chain(Conv(d,3,1,100)
 ,Conv(d,4,1,100)
 ,Conv(d,5,1,100)
-,Dense(300,6,pdrop=0.5),λ1=4f-6)
+,Dense(300,6,pdrop=0.5),λ2=0.01)
 summary.(l.w for l in dene.layers)
 
 n_epochs=20;
