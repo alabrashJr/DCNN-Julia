@@ -13,8 +13,6 @@ persentation: https://docs.google.com/document/d/1lyTPLovvrCkhU1NIUpxNmgOyKWNYgQ
 
 Datasheet: https://docs.google.com/spreadsheets/d/1vkZVL3cdjIBhrTeOTqbaTDuQXeHW_J6rP7MCSOOSj3A
 
-DCNN source code that runs python 2.66 and Theano 0.7 : https://github.com/cosmmb/DCNN
-
 
 ![model_structure](https://user-images.githubusercontent.com/9295206/58470550-98a4a200-814a-11e9-8e01-e9288a0fa42b.jpg)
 
