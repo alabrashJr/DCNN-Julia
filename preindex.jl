@@ -3,7 +3,7 @@
 #Parse each line trec_all_parsed.txt file to node struct
 
 using Pkg; for p in ("JLD2","FileIO"); haskey(Pkg.installed(),p) || Pkg.add(p); end
-using HDF5,JLD2,FileIO
+using JLD2,FileIO
 
 mutable struct node 
     word
@@ -81,11 +81,7 @@ for i in fileReaded
                push!(p.kidsword,current.word)
                push!(p.kidsindex,current.selfindex)
            end
-   #         for (j,i) in node_container
-   #             println( "self\t", i.selfindex, "\tparent\t", i.parentindex,"\tchild\t", i.kidsindex)
-          # end
            push!(doc,node_container)
-           #break 
 end
 
 save("Data/data.jld2","data",doc) # using FileIO pacakge 

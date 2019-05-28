@@ -1,4 +1,4 @@
-# @Abdulrahman Alabrash
+#@Abdulrahman Alabrash
 # https://github.com/alabrashJr/DCNN-Julia
 #
 # Read data from saved file load("TREC_sib.jld2","datas")-> returns revs, W, W2, word_idx_map, vocab
@@ -19,14 +19,15 @@ using Pkg;Pkg.update(); for p in ("DataStructures","LinearAlgebra","Knet","FileI
 using DataStructures,FileIO,LinearAlgebra;
 using Base.Iterators: flatten
 using Statistics: mean
-using Knet: Knet, conv4, pool, mat, KnetArray, nll, zeroone, progress, sgd, param, param0, dropout, relu, Data,minibatch,adadelta,training;
+using Knet
+using Knet:Data
 using Dates
 
-bels=["abbreviation", "entity", "description", "location" ,"numeric"," "]
+#"abbreviation", "entity", "description", "location" ,"numeric","human"
+Labels=["ENTY", "LOC", "ABBR", "NUM", "HUM", "DESC"]
 revs, W, W2, word_idx_map, vocab=load("Data/TREC_sib.jld2","datas");
 word_idx_map["ROOT"]=size(W,1);
 W=W';
-
 
 #Transforms sentence into a list of indices. Pad with zeroes.
 function get_text_mat(t,word_idx_map;max_l=56,filter_h=5)
@@ -48,8 +49,8 @@ function get_text_mat(t,word_idx_map;max_l=56,filter_h=5)
     return  x
 end
 
+
 function getSen(vector)
-#labels=["abbreviation","numeric",  "description", "human","location" ,"entity"]
     t=Array{Int}(vector)
     println(permutedims(t))
     for i in t
@@ -60,6 +61,7 @@ function getSen(vector)
         end
     end
 end
+
 
 #Transforms sentence into a list of indices. Pad with zeroes.
 function get_tree_rep(r,word_idx_map)
@@ -112,49 +114,41 @@ end
     dev_tensor = t3
     return (train,test,dev),(train_tensor,test_tensor,dev_tensor)
 end
+
 dataset,datasetTensor=train_dev_test(revs);
 
-sent1=vcat([permutedims(vcat(datasetTensor[1][x][1:end-1]...)) for x in 1:size(datasetTensor[1],1)]);#sent1=vcat([permutedims(vcat(datasetTensor[1][1][1:end-1]...)) for x in 1:size(datasetTensor[1],1)]...)
-sent2=vcat([permutedims(vcat(datasetTensor[2][x][1:end-1]...)) for x in 1:size(datasetTensor[2],1)]);#sent1=vcat([permutedims(vcat(datasetTensor[1][1][1:end-1]...)) for x in 1:size(datasetTensor[1],1)]...);
+train_seq=vcat([permutedims(vcat(datasetTensor[1][x][1:end-1]...)) for x in 1:size(datasetTensor[1],1)]);
+test_seq=vcat([permutedims(vcat(datasetTensor[2][x][1:end-1]...)) for x in 1:size(datasetTensor[2],1)]);
 
-y_train=Array{Int8}([dataset[1][:,x][end] for x in 1:size(dataset[1],2)]);#ytrainT=[datasetTensor[1][x,:][end][end][end] for x in 1:size(datasetTensor[1],1)];
-y_test=Array{Int8}([dataset[2][:,x][end] for x in 1:size(dataset[2],2)]);#ytestT=[datasetTensor[2][x,:][end][end][end] for x in 1:size(datasetTensor[2],1)];
-
+y_train=Array{Int8}([dataset[1][:,x][end] for x in 1:size(dataset[1],2)]);
+y_test=Array{Int8}([dataset[2][:,x][end] for x in 1:size(dataset[2],2)]);
 y_train=y_train.+1;
 y_test=y_test.+1;
 
-dtrn=minibatch(sent1,y_train,160,shuffle=true);
-dtst=minibatch(sent2,y_test,160);
+#sequence example input
+#reshape(W[:, permutedims(hcat(train_seq[1]...))],(300,450,1,1));
 
-# Let's define a chain of layers
+#minibatching
+dtrn=minibatch(train_seq,y_train,160,shuffle=true);
+dtst=minibatch(test_seq,y_test,160);
 
-# struct Chain
-#     layers
-#     Chain(layers...) = new(layers)
-# end
-# function (c::Chain)(x)
-#     #println(Dates.format(now(), "MM:SS"),".Chaindeyim\t",summary(x),"\t",size(x))
-#     x=KnetArray{Float32}(reshape(W[:, permutedims(hcat(x...))],(300,450,1,160)))
-#     #println(Dates.format(now(), "MM:SS"),".Chaindeyim\t",summary(x),"\t",size(x))
-# #     println("\nChaindeyim ,\t ", typeof(x),"\t", summary(x))
-#     (for l in c.layers; x = l(x); end; x)
-# end
-# function (c::Chain)(x,y)
-# #     println("\nloss Chaindeyim x ,\t ", typeof(x),"\t", summary(x))
-# #     println("\nloss Chaindeyim y ,\t ", typeof(y),"\t", summary(y))
-#     nll(c(x),y)
-#
-# end
-# (c::Chain)(d::Data) = mean(c(x,y) for (x,y) in d)
+#minibatch example input
+reshape(W[:, permutedims(hcat(first(dtrn)[1]...))],(300,450,1,160));
+
+function guassian(w1,w2,cx,cy;range=[0.01,-0.01])
+    return Knet.Param(KnetArray{Float32}((rand(w1,w2,cx,cy).*0.02).- 0.01))
+end
 
 struct Chain
     layers; λ1; λ2
     Chain(layers...; λ1=0, λ2=0) = new(layers, λ1, λ2)
 end
 function (c::Chain)(x)
-    x=KnetArray{Float32}(reshape(W[:, permutedims(hcat(x...))],(300,450,1,160)))
-     (for l in c.layers; x = l(x); end; x)
- end
+    x=KnetArray{Float32}(reshape(W[:, vec(hcat(x...))],(300,450,1,160)))
+    all=vcat(c.layers[1](x),c.layers[2](x),c.layers[3](x))
+    return c.layers[4](all)
+    
+end
 (c::Chain)(d::Data) = mean(c(x,y) for (x,y) in d)
 function (c::Chain)(x,y)
     loss = nll(c(x),y)
@@ -164,30 +158,36 @@ function (c::Chain)(x,y)
     end
     return loss
 end
+
 # Define a convolutional layer:
 struct Conv; w; b; f; p;E; end
 function (c::Conv)(x)
-#     println("\nConvdeyim \t", typeof(x),"\t", summary(x) )
-#xx=KnetArray{Float32}(reshape(c.E[:, permutedims(hcat(x...))],(300,450,1,160)))
-    return c.f.(pool(conv4(c.w, dropout(x,c.p)) .+ c.b))
+    conv=conv4(c.w, dropout(x,c.p))
+    r=reshape(c.f.(pool(conv,window=(1,size(conv)[2])).+c.b),(size(conv)[3],size(conv)[4]))
+    return r
 end
+#with Xavier
 Conv(w1::Int,w2::Int,cx::Int,cy::Int,f=relu;pdrop=0,E=W) = Conv(param(w1,w2,cx,cy), param0(1,1,cy,1), f, pdrop,E)
 
-# Redefine dense layer (See mlp.ipynb):
+#with Guassian
+#Conv(w1::Int,w2::Int,cx::Int,cy::Int,f=relu;pdrop=0,E=W) = Conv(guassian(w1,w2,cx,cy), param0(1,1,cy,1), f, pdrop,E)
+
+
+#define dense layer :
 struct Dense; w; b; f; p; end
 function (d::Dense)(x)
-#     println("\nDensedeyim ,\t " , typeof(x),"\t", summary(x))
-    d.f.(d.w * mat(dropout(x,d.p)) .+ d.b) # mat reshapes 4-D tensor to 2-D matrix so we can use matmul
+    d.f.(d.w * mat(dropout(x,d.p)) .+ d.b)
 end
-Dense(i::Int,o::Int,f=Knet.identity;pdrop=0) = Dense(Knet.Param(KnetArray{Float32}((rand(o,i).*0.02).- 0.01)), param0(o), f, pdrop)
 
-# dropout_rate=[0.5] #where in which layer ? conv or dense
+Dense(i::Int,o::Int,f=Knet.identity;pdrop=0) = Dense(param(o,i), param0(o), f, pdrop)
+
+
 function trainresults(file,model; o...)
         println("lr =",lr_decay," \t n_epochs= ",n_epochs)
     if (print("Train from scratch? "); readline()[1]=='y')
         takeevery(n,itr) = (x for (i,x) in enumerate(itr) if i % n == 1)
         r = ((model(dtrn), model(dtst), zeroone(model,dtrn), zeroone(model,dtst))
-             for x in takeevery(length(dtrn), progress(adadelta(model,repeat(dtrn,n_epochs),lr=lr_decay,gclip=3))))
+             for x in takeevery(length(dtrn), progress(adadelta(model,repeat(dtrn,n_epochs),lr=lr_decay))))
         r = reshape(collect(Float32,flatten(r)),(4,:))
         Knet.save(file,"results",r)
         Knet.gc() # To save gpu memory
@@ -198,22 +198,13 @@ function trainresults(file,model; o...)
     return r
 end
 
-# dcnn5 =   Chain( Conv(3,3,1,5),
-# Conv(4,4,5,10),
-# Conv(5,5,10,15),
-# Dense(27030,1100,pdrop=0.7),
-# Dense(1100,6,pdrop=0.5))
-#
+d=300
+DCNN=Chain(Conv(d,3,1,100)
+,Conv(d,4,1,100)
+,Conv(d,5,1,100)
+,Dense(300,6,pdrop=0.5),λ1=4f-6)
+summary.(l.w for l in DCNN.layers)
 
-dcnn7=Chain( Conv(2,2,1,5),
-Conv(3,3,5,10),
-Conv(3,3,10,20),
-Conv(4,4,20,40),
-Conv(4,4,40,100),
-Dense(6600,6,pdrop=0.7),λ1=4f-5)
-summary.(l.w for l in dcnn7.layers)
-
-n_epochs=80;
+n_epochs=17;
 lr_decay = 0.95
-cnn9=trainresults("models/dcnn11_4_2.jld2", dcnn7);
-
+results=trainresults("models/dcnn13_3.jld2", DCNN);

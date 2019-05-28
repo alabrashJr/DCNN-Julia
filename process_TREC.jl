@@ -30,7 +30,7 @@
 #             * [5] grand parent: 
 #                     * If is available add it if not add “Root”
 # 
-# 
+#              -> [Word,Parent,sibling1,sibling2,grandP]
 #     * set_sibling2, execute sibling2 method for each sentence and padding it to the maxl which is 45, and add the label of the sentence as a list so the final length will be 46, for each sentence: size(#sentence(maxl(5))
 # 
 # 
@@ -42,14 +42,15 @@
 #         * [2xRoot,1stWord,1st:2rd ancestor]
 #         * [Root,1stWord,1st:3rd ancestor]
 #         * For each word 
-#             * [ Word, 1st ancestor, 2nd ancestor, 3rd ancestor, 4th ancestor]
+#             *-> [ Word, 1st ancestor, 2nd ancestor, 3rd ancestor, 4th ancestor]
 # 
 # 
 # * revs= Dict{String,Any} with 5 entries:
 #         y-> label of the questions 1-5
 #         num_words-> length of questions
 #         tree -> concrete  the ancestors array with siblings array -> length of output array will be(#sentence(maxl(5+5))
-#         text -> the question text
+#           [Word, 1st ancestor, 2nd ancestor, 3rd ancestor, 4th ancestor,Word,Parent,sibling1,sibling2,grandP]
+#         text -> the question's text
 #         split -> type of tuple (training, test , div) 
 # 
 # 
@@ -158,8 +159,7 @@ function build_data_cv(file, split_dict, label_dict, clean_string=false)
     return revs, vocab
 end
 
-##converting each object of the tree to structured list of trees. 
-#<img width="657" alt="Screen Shot 2019-04-02 at 15 45 50" src="https://user-images.githubusercontent.com/9295206/55403412-77ff0800-555e-11e9-9cc7-e8977c06cb31.png">  
+##converting each object of the tree to structured list of trees.
 function sibling2(sents, opt)
     sent_list = []
     kez= sort(collect(keys(sents)))
@@ -252,7 +252,6 @@ function set_conv_sent(tree,labels_dict,max_len)
         #@show length(sent_list)
         push!(doc_list,sent_list)
             end     
-   # @show length(doc_list)
     return doc_list
 end
 
@@ -284,10 +283,9 @@ pf(s)=return parse(Int,s)
 pc(s)=return convert(Char,s[1])
 word_vecs = Dict()
     open(fname, "r") do f
-                @show header = readline(f)
+                header = readline(f)
                 vocab_size, layer1_size = map(pf, split(header))
-                @show binary_len = sizeof(Float32) * layer1_size
-                #@show  binary_len = layer1_size
+                binary_len = sizeof(Float32) * layer1_size
              for line in collect(1:vocab_size)
                 word=[]
                 while true 
@@ -364,7 +362,6 @@ for (ind,l) in enumerate(data_tree)
     push!(new_data_tree,new_list)
 end
 data_tree = new_data_tree
-#@show length.(new_data_tree)
 for i in data_tree;add_tree2vocab(i, vocab);end
 @show length(vocab)
 revs = merge_two(revs,data_tree);
@@ -374,7 +371,6 @@ println("vocab size: " ,length(vocab))
 println("max sentence length: " ,max_l+8)
 println("loading word2vec vectors...")
 w2v = load_bin_vec(w2v_file, vocab)
-#w2v=Dict()
 println("word2vec loaded!")
 println("num words already in word2vec: ",length(w2v))
 vocab["ROOT"]=1
