@@ -20,6 +20,9 @@ python download_google_drive/download_gdrive.py 1YWl_p2FtzOWhknwVxAzFD5740hnUhwe
 python download_google_drive/download_gdrive.py 1cUpzjy9ASH1pJQeJkM1KoKMcdBwe9kDT  ./Data.zip
 unzip Data.zip -d ./
 rm Data.zip
+
+julia process_TREC.jl
+julia dcnn.jl
 ```
 
 The input to most NLP tasks is sentences or documents represented as a matrix. Each row of the matrix corresponds to one token, typically a word, but it could be a character. That is, each row is a vector that represents a word. Typically, these vectors are word embeddings (low dimensional representations), but they could also be one-hot vectors that index the word into a vocabulary. For a 10 word sentence using a 300-dimensional embedding, we would have a 300x10 matrix as our input. In computer vision, the filters slide over local patches of an image, but in NLP filters slide over full rows of the matrix (words). Thus, the height of the filters is usually the same as the height of the input matrix. The width, or region size, may vary but sliding. In order to capture the long-distance dependencies the dependency based convolution model (DCNN) is proposed. 
